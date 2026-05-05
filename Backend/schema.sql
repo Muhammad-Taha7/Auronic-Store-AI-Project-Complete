@@ -1,0 +1,12 @@
+CREATE DATABASE IF NOT EXISTS auronic_store;
+USE auronic_store;
+
+CREATE TABLE IF NOT EXISTS carousel_images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    image_path VARCHAR(255) NOT NULL,
+    alt_text VARCHAR(255) DEFAULT NULL,
+    display_order INT NOT NULL DEFAULT 0,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
