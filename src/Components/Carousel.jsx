@@ -22,7 +22,7 @@ export const Carousel = ({ items = [] }) => {
 
   if (!items.length) {
     return (
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <section className=" px-4 py-16 sm:px-6 lg:px-8">
         <div className="rounded-[2rem] border border-black/10 bg-black px-8 py-20 text-center text-white shadow-2xl">
           <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/50">Carousel</p>
           <h1 className="mt-4 text-4xl font-black uppercase tracking-[0.25em] sm:text-5xl">No slides yet</h1>
@@ -42,7 +42,7 @@ export const Carousel = ({ items = [] }) => {
     : `${API_BASE_URL}${current.imageUrl}`
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <section className=" px-4 py-8 sm:px-6 lg:px-8">
       <div className="overflow-hidden rounded-[2rem] border border-black/10 bg-black text-white shadow-2xl">
         <div className="relative aspect-[16/9] w-full overflow-hidden bg-zinc-950 sm:aspect-[21/9]">
           <img
