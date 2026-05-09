@@ -29,25 +29,38 @@ export const UserMenu = () => {
       .slice(0, 2)
   }
 
+  const getUserPhotoUrl = () => {
+    return (
+      user?.photoURL ||
+      user?.providerData?.find((provider) => provider?.photoURL)?.photoURL ||
+      user?.reloadUserInfo?.photoUrl ||
+      ''
+    )
+  }
+
   if (!user) {
     return null
   }
+
+  const photoUrl = getUserPhotoUrl()
+  const displayName = user.displayName || user.email || 'User'
 
   return (
     <div className="relative">
       {/* Profile Picture Button */}
       <button
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm hover:from-blue-600 hover:to-purple-700 transition-all"
+        className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-linear-to-br from-blue-500 to-cyan-600 text-white font-bold text-sm transition-all hover:from-blue-600 hover:to-cyan-700"
       >
-        {user.photoURL ? (
+        {photoUrl ? (
           <img
-            src={user.photoURL}
-            alt={user.displayName || 'User'}
-            className="w-full h-full rounded-full object-cover"
+            src={photoUrl}
+            alt={displayName}
+            className="h-full w-full rounded-full object-cover"
+            referrerPolicy="no-referrer"
           />
         ) : (
-          getInitials(user.displayName || user.email)
+          getInitials(displayName)
         )}
       </button>
 
@@ -57,11 +70,22 @@ export const UserMenu = () => {
           {/* User Info */}
           <div className="px-4 py-3 border-b border-white/10">
             <p className="text-white text-sm font-semibold truncate">
-              {user.displayName || 'User'}
+              {displayName}
             </p>
           </div>
 
-         
+          <div className="px-2 py-2">
+            <button
+              type="button"
+              onClick={() => {
+                navigate('/orders')
+                setIsDropdownOpen(false)
+              }}
+              className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              My Orders
+            </button>
+          </div>
 
           {/* Logout Button */}
           <div className="px-4 py-2 border-t border-white/10">

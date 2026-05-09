@@ -77,7 +77,7 @@ export const PageTransitionProvider = ({ children }) => {
         {getBlocks().map((_, index) => (
           <div
             key={index}
-            className="page-transition-block origin-top scale-y-0 bg-[#0b1f4d]"
+            className="page-transition-block origin-top scale-y-0 bg-black"
           />
         ))}
       </div>

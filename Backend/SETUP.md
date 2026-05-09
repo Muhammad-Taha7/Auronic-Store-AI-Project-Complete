@@ -73,7 +73,36 @@ POST /api/carousel-images
   - title (required)
   - altText
   - displayOrder
-  - image (file, required)
+  - image (file) or imageUrl
+```
+
+### Product APIs
+```
+GET /api/products
+GET /api/products?trending=1
+GET /api/products/{id}
+POST /api/products
+PUT /api/products/{id}
+DELETE /api/products/{id}
+```
+
+### Product Form Data
+```
+- title (required)
+- description (required)
+- price (required)
+- originalPrice
+- category
+- badge
+- rating
+- displayOrder
+- coverImageFile or coverImageUrl
+- galleryImages (JSON array text or comma/newline list)
+- colors (JSON array text or comma/newline list)
+- warrantyOptions (JSON array text or comma/newline list)
+- highlights (JSON array text or comma/newline list)
+- isTrending
+- isActive
 ```
 
 ### Delete Carousel Image

@@ -1,15 +1,26 @@
-import React, { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { API_BASE_URL } from '../../config/api'
 
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard' },
   { to: '/admin/carousel-images', label: 'Add Carousel Images' },
+  { to: '/admin/trending-products', label: 'Add Trending Products' },
+  { to: '/admin/products', label: 'Add Products' },
+  { to: '/admin/blogs', label: 'Add Blogs' },
+  { to: '/admin/orders', label: 'Orders' },
+  { to: '/admin/queries', label: 'Show Queries' },
 ]
 
 export const AdminLayout = () => {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [pendingOrderCount, setPendingOrderCount] = useState(0)
+  const [toastMessage, setToastMessage] = useState('')
+  const [showToast, setShowToast] = useState(false)
+  const previousPendingCountRef = useRef(null)
+  const toastTimerRef = useRef(null)
 
   const handleLogout = () => {
     localStorage.removeItem('admin_session')
@@ -19,6 +30,62 @@ export const AdminLayout = () => {
   }
 
   const adminEmail = localStorage.getItem('admin_user') || localStorage.getItem('admin_email') || 'Taha'
+
+  const triggerToast = useCallback((message) => {
+    setToastMessage(message)
+    setShowToast(true)
+
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current)
+    }
+
+    toastTimerRef.current = setTimeout(() => {
+      setShowToast(false)
+    }, 3500)
+  }, [])
+
+  const fetchPendingOrders = useCallback(async (shouldNotify = true) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/orders?status=pending`)
+      if (!response.ok) {
+        return
+      }
+
+      const data = await response.json()
+      const orders = Array.isArray(data) ? data : []
+      const currentCount = orders.length
+      const previousCount = previousPendingCountRef.current
+
+      setPendingOrderCount(currentCount)
+
+      if (shouldNotify && previousCount !== null && currentCount > previousCount) {
+        const newOrders = currentCount - previousCount
+        triggerToast(newOrders === 1 ? 'We have a new Order' : `We have ${newOrders} new Orders`)
+      }
+
+      previousPendingCountRef.current = currentCount
+    } catch (error) {
+      console.error('Failed to fetch pending orders:', error)
+    }
+  }, [triggerToast])
+
+  useEffect(() => {
+    const initialLoadId = window.setTimeout(() => {
+      fetchPendingOrders(false)
+    }, 0)
+
+    const intervalId = setInterval(() => {
+      fetchPendingOrders(true)
+    }, 10000)
+
+    return () => {
+      clearTimeout(initialLoadId)
+      clearInterval(intervalId)
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current)
+      }
+    }
+  }, [fetchPendingOrders])
 
   return (
     <div className='min-h-screen bg-white text-black'>
@@ -123,7 +190,11 @@ export const AdminLayout = () => {
               </p>
             </div>
             <div className='flex items-center gap-4'>
-              <button className='rounded-lg p-2 text-black/60 hover:bg-black/5 transition-colors'>
+              <button
+                className='relative rounded-lg p-2 text-black/60 hover:bg-black/5 transition-colors'
+                aria-label='Pending orders notifications'
+                title={pendingOrderCount > 0 ? `${pendingOrderCount} pending orders` : 'No pending orders'}
+              >
                 <svg className='h-6 w-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
                   <path
                     strokeLinecap='round'
@@ -132,6 +203,11 @@ export const AdminLayout = () => {
                     d='M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'
                   />
                 </svg>
+                {pendingOrderCount > 0 && (
+                  <span className='absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black leading-none text-white shadow-lg shadow-red-200'>
+                    {pendingOrderCount > 99 ? '99+' : pendingOrderCount}
+                  </span>
+                )}
               </button>
               <div className='h-8 w-8 rounded-full bg-black flex items-center justify-center text-white font-bold text-sm'>
                 A
@@ -139,6 +215,12 @@ export const AdminLayout = () => {
             </div>
           </div>
         </header>
+
+        {showToast && (
+          <div className='fixed right-6 top-6 z-50 rounded-2xl border border-emerald-200 bg-white px-4 py-3 shadow-2xl shadow-slate-200'>
+            <p className='text-sm font-semibold text-slate-900'>{toastMessage}</p>
+          </div>
+        )}
 
         {/* Content */}
         <main className='p-6 min-h-[calc(100vh-120px)]'>
