@@ -1,16 +1,27 @@
-# React + Vite
+# Auronic E-commerce Workspace
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This workspace is split into two parts:
 
-Currently, two official plugins are available:
+- `FrontEnd/` contains the React + Vite app.
+- `Backend/` contains the Flask API, database code, and related Python scripts.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Run the app
 
-## React Compiler
+Frontend:
+```bash
+cd FrontEnd
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Backend:
+```bash
+cd Backend
+python app.py
+```
 
-## Expanding the ESLint configuration
+## Structure
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `FrontEnd/src/` holds all UI code.
+- `Backend/` holds the Python API and database setup.
+- Root-level markdown files document setup, testing, and backend details.

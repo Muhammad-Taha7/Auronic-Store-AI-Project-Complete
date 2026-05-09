@@ -11,7 +11,7 @@
 ### Backend Flask API
 - [ ] Python 3.8+ installed
 - [ ] Dependencies installed: `pip install -r requirements.txt`
-- [ ] Flask app starts: `python app.py`
+- [ ] Flask app starts: `python Backend/app.py`
 - [ ] API accessible at `http://localhost:5000`
 - [ ] Health endpoint works: `http://localhost:5000/api/health`
 - [ ] CORS enabled for all routes
@@ -198,6 +198,8 @@ python app.py
 cd FrontEnd
 npm run dev
 ```
+
+Run the frontend from the `FrontEnd` folder.
 
 ### Then
 - Open `http://localhost:5173` in browser

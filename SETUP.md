@@ -83,8 +83,7 @@ Keep secret provider keys only in `Backend/.env`. Do not place secret keys in th
 ### 4. Run Flask Backend
 
 ```bash
-cd Backend
-python app.py
+python Backend/app.py
 ```
 
 Backend will start on `http://localhost:5000`
@@ -153,6 +152,8 @@ To change the API URL, update `FrontEnd/src/config/api.js`:
 ```javascript
 export const API_BASE_URL = 'http://your-backend-url:5000'
 ```
+
+The frontend API helper now lives at `FrontEnd/src/config/api.js`.
 
 Or set environment variable:
 ```bash

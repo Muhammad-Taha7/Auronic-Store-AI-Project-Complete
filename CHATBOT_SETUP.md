@@ -11,9 +11,9 @@ This guide explains how to set up and run the new AI-powered chatbot for your Au
 3. **`Backend/app.py`** - Added `/api/chatbot` endpoint
 
 ### Frontend Files:
-1. **`src/Components/AuronicChatbot.jsx`** - React chatbot component
-2. **`src/Components/AuronicChatbot.css`** - Modern glassmorphism styling
-3. **`src/App.jsx`** - Integrated chatbot component
+1. **`FrontEnd/src/Components/AuronicChatbot.jsx`** - React chatbot component
+2. **`FrontEnd/src/Components/AuronicChatbot.css`** - Modern glassmorphism styling
+3. **`FrontEnd/src/App.jsx`** - Integrated chatbot component
 
 ---
 
@@ -22,7 +22,7 @@ This guide explains how to set up and run the new AI-powered chatbot for your Au
 ### 1. Install Python Dependencies
 
 ```bash
-cd Frontend/Backend
+cd Backend
 pip install -r requirements.txt
 ```
 
@@ -35,7 +35,7 @@ pip install -r requirements.txt
 ### 2. Start the Backend Server
 
 ```bash
-cd Frontend/Backend
+cd Backend
 python app.py
 ```
 
@@ -44,10 +44,12 @@ The Flask server will run on `http://localhost:5000`
 ### 3. Start the Frontend Development Server
 
 ```bash
-cd Frontend
+cd FrontEnd
 npm install
 npm run dev
 ```
+
+Run the frontend from the `FrontEnd` folder.
 
 The React app will run on `http://localhost:5173` (or your configured port)
 
@@ -161,7 +163,7 @@ And add response in `self.responses`:
 
 ### 2. Modify Styling
 
-Edit `src/Components/AuronicChatbot.css`:
+Edit `FrontEnd/src/Components/AuronicChatbot.css`:
 - Change gradient colors (currently purple/blue)
 - Adjust window size/position
 - Modify animation timings
@@ -202,6 +204,8 @@ And update API URL in `src/Components/AuronicChatbot.jsx`:
 ```javascript
 fetch('http://localhost:5001/api/chatbot', ...)
 ```
+
+If the frontend is running from `FrontEnd/`, update the fetch path there too.
 
 ---
 
