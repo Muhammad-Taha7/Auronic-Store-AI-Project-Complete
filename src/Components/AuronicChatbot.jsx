@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import './AuronicChatbot.css';
 import { MessageCircle, Send, X } from 'lucide-react';
+import { API_BASE_URL } from '../config/api';
 
 const AuronicChatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,7 +16,6 @@ const AuronicChatbot = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesContainerRef = useRef(null);
-  const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
@@ -48,7 +48,7 @@ const AuronicChatbot = () => {
 
     try {
       // Send to backend
-      const response = await fetch('http://localhost:5000/api/chatbot', {
+      const response = await fetch(`${API_BASE_URL}/api/chatbot`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,7 +71,7 @@ const AuronicChatbot = () => {
       };
 
       setMessages((prev) => [...prev, botMessage]);
-    } catch (error) {
+    } catch {
       // Add error message
       const errorMessage = {
         id: messages.length + 2,
@@ -100,7 +100,7 @@ const AuronicChatbot = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/chatbot', {
+      const response = await fetch(`${API_BASE_URL}/api/chatbot`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -121,7 +121,7 @@ const AuronicChatbot = () => {
       };
 
       setMessages((prev) => [...prev, botMessage]);
-    } catch (error) {
+    } catch {
       const errorMessage = {
         id: messages.length + 2,
         text: "Sorry, I'm having trouble connecting. Please try again.",

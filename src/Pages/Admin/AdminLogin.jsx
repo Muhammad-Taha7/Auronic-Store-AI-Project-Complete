@@ -1,5 +1,8 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+
+const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || ''
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || ''
 
 export const AdminLogin = () => {
   const navigate = useNavigate()
@@ -50,9 +53,6 @@ export const AdminLogin = () => {
       }
 
       await new Promise((r) => setTimeout(r, 900))
-
-      const ADMIN_USERNAME = 'Taha'
-      const ADMIN_PASSWORD = 'password.11'
 
       if (cleanEmail === ADMIN_USERNAME && cleanPassword === ADMIN_PASSWORD) {
         const token = btoa(`${cleanEmail}:${Date.now()}:${Math.random().toString(36)}`)
