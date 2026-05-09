@@ -1,6 +1,10 @@
 import React from 'react'
 import { API_BASE_URL } from '../../config/api'
 
+// Lucide-style SVG Icons for better UX
+const EditIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+const DeleteIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+
 const emptyForm = {
   title: '',
   description: '',
@@ -63,71 +67,41 @@ export const AdminProducts = () => {
       setPreviewUrl(form.coverImageUrl ? getImageSrc(form.coverImageUrl) : '')
       return undefined
     }
-
     if (!coverImageFile) {
-      if (editingProductId) {
-        setPreviewUrl(getImageSrc(form.coverImageUrl))
-      } else {
-        setPreviewUrl('')
-      }
+      setPreviewUrl(editingProductId ? getImageSrc(form.coverImageUrl) : '')
       return undefined
     }
-
     const objectUrl = URL.createObjectURL(coverImageFile)
     setPreviewUrl(objectUrl)
     return () => URL.revokeObjectURL(objectUrl)
   }, [coverImageFile, editingProductId, form.coverImageUrl, uploadMode])
 
-  const handleChange = (event) => {
-    const { name, value } = event.target
-    setForm((current) => ({ ...current, [name]: value }))
-  }
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
     setMessage('')
 
-    if (!form.title.trim()) {
-      setError('Title is required.')
-      return
-    }
-
-    if (!form.description.trim()) {
-      setError('Description is required.')
-      return
-    }
-
-    if (uploadMode === 'file' && !coverImageFile && !editingProductId) {
-      setError('Please select a cover image file.')
-      return
-    }
-
-    if (uploadMode === 'url' && !form.coverImageUrl.trim() && !editingProductId) {
-      setError('Please enter a cover image URL.')
+    if (!form.title.trim() || !form.description.trim()) {
+      setError('Title and Description are required.')
       return
     }
 
     const payload = new FormData()
-    payload.append('title', form.title.trim())
-    payload.append('description', form.description.trim())
-    payload.append('price', form.price)
-    payload.append('originalPrice', form.originalPrice)
-    payload.append('category', form.category.trim())
-    payload.append('badge', form.badge.trim())
-    payload.append('rating', form.rating)
-    payload.append('displayOrder', form.displayOrder)
-    payload.append('colors', JSON.stringify(form.colors.split(/\n|,/).map((item) => item.trim()).filter(Boolean)))
-    payload.append('warrantyOptions', JSON.stringify(form.warrantyOptions.split(/\n|,/).map((item) => item.trim()).filter(Boolean)))
-    payload.append('galleryImages', JSON.stringify(form.galleryImages.split(/\n|,/).map((item) => item.trim()).filter(Boolean)))
-    payload.append('highlights', JSON.stringify(form.highlights.split(/\n|,/).map((item) => item.trim()).filter(Boolean)))
+    Object.keys(form).forEach(key => {
+        if(['colors', 'warrantyOptions', 'galleryImages', 'highlights'].includes(key)) {
+            payload.append(key, JSON.stringify(form[key].split(/\n|,/).map(i => i.trim()).filter(Boolean)))
+        } else if (key !== 'coverImageUrl') {
+            payload.append(key, form[key])
+        }
+    })
+    
     payload.append('isTrending', 'false')
     payload.append('isActive', 'true')
 
-    if (uploadMode === 'file') {
-      if (coverImageFile) {
-        payload.append('coverImageFile', coverImageFile)
-      }
+    if (uploadMode === 'file' && coverImageFile) {
+      payload.append('coverImageFile', coverImageFile)
     } else {
       payload.append('coverImageUrl', form.coverImageUrl.trim())
     }
@@ -136,402 +110,234 @@ export const AdminProducts = () => {
     try {
       const response = await fetch(
         editingProductId ? `${API_BASE_URL}/api/products/${editingProductId}` : `${API_BASE_URL}/api/products`,
-        {
-          method: editingProductId ? 'PUT' : 'POST',
-          body: payload,
-        },
+        { method: editingProductId ? 'PUT' : 'POST', body: payload }
       )
-
       const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.message || (editingProductId ? 'Could not update product.' : 'Could not save product.'))
-      }
-
-      setMessage(data.message || (editingProductId ? 'Product updated successfully.' : 'Product added successfully.'))
-      setForm(emptyForm)
-      setCoverImageFile(null)
-      setUploadMode('url')
-      setPreviewUrl('')
-      setEditingProductId(null)
-      await loadProducts()
-    } catch (submitError) {
-      setError(submitError.message)
+      if (!response.ok) throw new Error(data.message || 'Action failed')
+      
+      setMessage(editingProductId ? 'Updated successfully' : 'Added successfully')
+      resetForm()
+      loadProducts()
+    } catch (err) {
+      setError(err.message)
     } finally {
       setSaving(false)
     }
   }
 
   const handleEdit = (product) => {
-    setError('')
-    setMessage('')
     setEditingProductId(product.id)
     setForm({
-      title: product.title || '',
-      description: product.description || '',
-      price: String(product.price ?? ''),
-      originalPrice: product.originalPrice ? String(product.originalPrice) : '',
-      category: product.category || '',
-      badge: product.badge || '',
-      rating: String(product.rating ?? '5'),
-      displayOrder: String(product.displayOrder ?? 0),
+      ...product,
+      price: String(product.price || ''),
+      originalPrice: String(product.originalPrice || ''),
       colors: toJsonArrayText(product.colors),
       warrantyOptions: toJsonArrayText(product.warrantyOptions),
       galleryImages: toJsonArrayText(product.galleryImages),
       highlights: toJsonArrayText(product.highlights),
-      coverImageUrl: product.coverImage && product.coverImage.startsWith('http') ? product.coverImage : '',
+      coverImageUrl: product.coverImage?.startsWith('http') ? product.coverImage : '',
     })
-    setCoverImageFile(null)
-    setUploadMode(product.coverImage && product.coverImage.startsWith('http') ? 'url' : 'file')
-    setPreviewUrl(getImageSrc(product.coverImage))
-    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setUploadMode(product.coverImage?.startsWith('http') ? 'url' : 'file')
+    formRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const handleDelete = async (productId) => {
-    setError('')
-    setMessage('')
-
+  const handleDelete = async (id) => {
+    if(!window.confirm("Delete this product?")) return
     try {
-      const response = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
-        method: 'DELETE',
-      })
-
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.message || 'Could not delete product.')
-      }
-
-      setMessage(data.message || 'Product deleted successfully.')
-      await loadProducts()
-    } catch (deleteError) {
-      setError(deleteError.message)
-    }
+      await fetch(`${API_BASE_URL}/api/products/${id}`, { method: 'DELETE' })
+      loadProducts()
+    } catch (err) { setError(err.message) }
   }
 
   const resetForm = () => {
     setForm(emptyForm)
     setCoverImageFile(null)
-    setUploadMode('url')
-    setPreviewUrl('')
     setEditingProductId(null)
-    setMessage('')
-    setError('')
+    setPreviewUrl('')
   }
 
   return (
-    <div className="space-y-8 text-black">
-      <div className="flex flex-col gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-black/50">Product Catalog</p>
-        <h2 className="text-3xl font-black uppercase tracking-[0.2em]">Add Products</h2>
-        <p className="max-w-2xl text-sm leading-6 text-black/60">
-          Manage all products in your store catalog. These products will be displayed on the Products page for customers to browse and purchase.
-        </p>
-      </div>
-
-      {(message || error) && (
-        <div className={`rounded-2xl border px-5 py-4 text-sm ${error ? 'border-black/15 bg-black/5 text-black' : 'border-black bg-black text-white'}`}>
-          {error || message}
+    <div className=" mx-auto p-4 lg:p-8 space-y-12 text-slate-900 font-sans">
+      {/* Header Section */}
+      <header className="relative pb-8 border-b border-slate-200">
+        <div className="flex flex-col gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-indigo-600">Inventory Management</span>
+          <h1 className="text-4xl font-black tracking-tight text-slate-900 sm:text-5xl">Product Engine</h1>
+          <p className="text-slate-500 max-w-xl text-sm">Control your digital storefront with precision. Edit catalog details, pricing, and media assets in real-time.</p>
         </div>
-      )}
+      </header>
 
-      <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <form ref={formRef} onSubmit={handleSubmit} className="rounded-4xl border border-black/10 bg-white p-6 shadow-xl">
-          <div className="grid gap-5">
-            <div className="flex items-center justify-between gap-3 rounded-2xl border border-black/10 bg-black/5 px-4 py-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-black/50">
-                  {editingProductId ? 'Editing Product' : 'Create Product'}
-                </p>
-                <p className="mt-1 text-sm text-black/60">
-                  {editingProductId ? 'Update the selected product details.' : 'Fill in the product details below.'}
-                </p>
-              </div>
-              {editingProductId ? (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="rounded-xl border border-black/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.25em] text-black transition-colors hover:bg-black/5"
-                >
-                  Cancel Edit
-                </button>
-              ) : null}
-            </div>
-
-            <div className="flex gap-2 rounded-xl border border-black/10 bg-black/5 p-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setUploadMode('file')
-                  setForm((current) => ({ ...current, coverImageUrl: '' }))
-                }}
-                className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-[0.2em] transition-colors ${
-                  uploadMode === 'file' ? 'bg-black text-white' : 'bg-transparent text-black hover:bg-black/10'
-                }`}
-              >
-                File Upload
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUploadMode('url')
-                  setCoverImageFile(null)
-                }}
-                className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-[0.2em] transition-colors ${
-                  uploadMode === 'url' ? 'bg-black text-white' : 'bg-transparent text-black hover:bg-black/10'
-                }`}
-              >
-                From URL
-              </button>
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-black/50">Product Title</label>
-                <input
-                  name="title"
-                  value={form.title}
-                  onChange={handleChange}
-                  className="w-full rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-black placeholder:text-black/30 focus:border-black focus:outline-none"
-                  placeholder="e.g. USB-C Charging Cable"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-black/50">Category</label>
-                <input
-                  name="category"
-                  value={form.category}
-                  onChange={handleChange}
-                  className="w-full rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-black placeholder:text-black/30 focus:border-black focus:outline-none"
-                  placeholder="e.g. Electronics"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-black/50">Description</label>
-              <textarea
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                rows={5}
-                className="w-full rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-black placeholder:text-black/30 focus:border-black focus:outline-none"
-                placeholder="Describe the product features and experience..."
-              />
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-black/50">Price</label>
-                <input
-                  type="number"
-                  name="price"
-                  value={form.price}
-                  onChange={handleChange}
-                  className="w-full rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-black placeholder:text-black/30 focus:border-black focus:outline-none"
-                  placeholder="25000"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-black/50">Original Price</label>
-                <input
-                  type="number"
-                  name="originalPrice"
-                  value={form.originalPrice}
-                  onChange={handleChange}
-                  className="w-full rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-black placeholder:text-black/30 focus:border-black focus:outline-none"
-                  placeholder="30000"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-black/50">Rating</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="5"
-                  step="0.1"
-                  name="rating"
-                  value={form.rating}
-                  onChange={handleChange}
-                  className="w-full rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-black placeholder:text-black/30 focus:border-black focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-black/50">Badge</label>
-                <input
-                  name="badge"
-                  value={form.badge}
-                  onChange={handleChange}
-                  className="w-full rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-black placeholder:text-black/30 focus:border-black focus:outline-none"
-                  placeholder="e.g. Trending"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-black/50">Display Order</label>
-                <input
-                  type="number"
-                  name="displayOrder"
-                  value={form.displayOrder}
-                  onChange={handleChange}
-                  className="w-full rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-black placeholder:text-black/30 focus:border-black focus:outline-none"
-                  min="0"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-black/50">Cover Image</label>
-              {uploadMode === 'file' ? (
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
-                  onChange={(event) => setCoverImageFile(event.target.files?.[0] || null)}
-                  className="block w-full text-sm text-black file:mr-4 file:rounded-xl file:border-0 file:bg-black file:px-4 file:py-3 file:text-sm file:font-semibold file:text-white hover:file:bg-black/90"
-                />
-              ) : (
-                <input
-                  name="coverImageUrl"
-                  value={form.coverImageUrl}
-                  onChange={handleChange}
-                  className="w-full rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-black placeholder:text-black/30 focus:border-black focus:outline-none"
-                  placeholder="Paste cover image URL"
-                />
+      {/* Main Interface */}
+      <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] items-start">
+        
+        {/* Form Column */}
+        <section ref={formRef} className="space-y-6">
+          <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
+            <div className="p-1 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between px-6 py-4">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-slate-700">
+                {editingProductId ? 'Modify Entity' : 'New Product Entry'}
+              </h2>
+              {editingProductId && (
+                <button onClick={resetForm} type="button" className="text-[10px] font-bold uppercase text-red-500 hover:text-red-600">Discard Edit</button>
               )}
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-black/50">Colors</label>
-                <textarea
-                  name="colors"
-                  value={form.colors}
-                  onChange={handleChange}
-                  rows={4}
-                  className="w-full rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-black placeholder:text-black/30 focus:border-black focus:outline-none"
-                  placeholder="Black\nWhite\nSilver"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-black/50">Warranty Options</label>
-                <textarea
-                  name="warrantyOptions"
-                  value={form.warrantyOptions}
-                  onChange={handleChange}
-                  rows={4}
-                  className="w-full rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-black placeholder:text-black/30 focus:border-black focus:outline-none"
-                  placeholder="Standard Warranty\n1 Year Protection\n2 Year Premium"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-black/50">Gallery Images</label>
-                <textarea
-                  name="galleryImages"
-                  value={form.galleryImages}
-                  onChange={handleChange}
-                  rows={4}
-                  className="w-full rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-black placeholder:text-black/30 focus:border-black focus:outline-none"
-                  placeholder="https://...\nhttps://..."
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-black/50">Highlights</label>
-                <textarea
-                  name="highlights"
-                  value={form.highlights}
-                  onChange={handleChange}
-                  rows={4}
-                  className="w-full rounded-xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-black placeholder:text-black/30 focus:border-black focus:outline-none"
-                  placeholder="Immersive display\nPremium sound\nFast charging"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setUploadMode('url')}
-                className="rounded-xl border border-black/10 px-5 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-black transition-colors hover:bg-black/5"
-              >
-                {editingProductId ? 'Keep Current Mode' : 'Use URL Mode'}
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-xl bg-black px-5 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white transition-colors hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : editingProductId ? 'Update Product' : 'Add Product'}
-              </button>
-            </div>
-          </div>
-        </form>
-
-        <div className="rounded-4xl border border-black/10 bg-black p-6 text-white shadow-xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/50">Preview</p>
-          <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-            {previewUrl ? (
-              <img src={previewUrl} alt="Preview" className="h-72 w-full object-cover" />
-            ) : (
-              <div className="flex h-72 items-center justify-center px-6 text-center text-sm leading-6 text-white/50">
-                Select a product image to see a live preview here.
-              </div>
-            )}
-          </div>
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-            Products added here will appear on the Products catalog page and be available for customers to purchase.
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-4xl border border-black/10 bg-white p-6 shadow-xl">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-xl font-black uppercase tracking-[0.2em]">Products List</h3>
-            <p className="mt-1 text-sm text-black/50">{loading ? 'Loading...' : `${products.length} product(s) in catalog`}</p>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {products.map((product) => {
-            const imageUrl = getImageSrc(product.coverImage)
-            return (
-              <div key={product.id} className="overflow-hidden rounded-2xl border border-black/10 bg-black text-white shadow-lg">
-                <img src={imageUrl} alt={product.title} className="h-44 w-full object-cover" />
-                <div className="space-y-3 p-4">
-                  <div>
-                    <p className="text-base font-bold">{product.title}</p>
-                    <p className="text-xs uppercase tracking-[0.3em] text-white/50">Rs. {Number(product.price || 0).toLocaleString()}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleEdit(product)}
-                      className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold uppercase tracking-[0.25em] text-white transition-colors hover:bg-white hover:text-black"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(product.id)}
-                      className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold uppercase tracking-[0.25em] text-white transition-colors hover:bg-white hover:text-black"
-                    >
-                      Delete
-                    </button>
-                  </div>
+            <div className="p-6 lg:p-8 space-y-8">
+              {/* Basic Info */}
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Product Title</label>
+                  <input name="title" value={form.title} onChange={handleChange} className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-slate-900 transition-all" placeholder="Enter name..." />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Classification</label>
+                  <input name="category" value={form.category} onChange={handleChange} className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-slate-900 transition-all" placeholder="Electronics, Audio..." />
                 </div>
               </div>
-            )
-          })}
-          {!products.length && !loading && (
-            <div className="rounded-2xl border border-dashed border-black/15 bg-black/5 p-8 text-center text-sm text-black/50 md:col-span-2 xl:col-span-3">
-              No products in catalog yet. Add one to get started!
+
+              {/* Description */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Marketing Copy</label>
+                <textarea name="description" value={form.description} onChange={handleChange} rows={4} className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-slate-900 transition-all resize-none" placeholder="Detailed product story..." />
+              </div>
+
+              {/* Financials */}
+              <div className="grid gap-6 grid-cols-2 md:grid-cols-3">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Sale Price</label>
+                  <input type="number" name="price" value={form.price} onChange={handleChange} className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold" placeholder="0.00" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">MSRP</label>
+                  <input type="number" name="originalPrice" value={form.originalPrice} onChange={handleChange} className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm text-slate-400" placeholder="0.00" />
+                </div>
+                <div className="space-y-2 col-span-2 md:col-span-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Rating (1-5)</label>
+                  <input type="number" step="0.1" name="rating" value={form.rating} onChange={handleChange} className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm" />
+                </div>
+              </div>
+
+              {/* Media Control */}
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                 <div className="flex items-center gap-4">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Media Source:</label>
+                    <div className="flex bg-slate-100 p-1 rounded-xl">
+                        {['file', 'url'].map(mode => (
+                            <button key={mode} type="button" onClick={() => setUploadMode(mode)} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${uploadMode === mode ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'}`}>
+                                {mode}
+                            </button>
+                        ))}
+                    </div>
+                 </div>
+                 {uploadMode === 'file' ? (
+                    <div className="relative group">
+                        <input type="file" onChange={(e) => setCoverImageFile(e.target.files?.[0])} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                        <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center group-hover:border-slate-400 transition-colors">
+                            <p className="text-xs font-medium text-slate-500">{coverImageFile ? coverImageFile.name : 'Click or drag image file here'}</p>
+                        </div>
+                    </div>
+                 ) : (
+                    <input name="coverImageUrl" value={form.coverImageUrl} onChange={handleChange} className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm" placeholder="https://image-cloud.com/photo.jpg" />
+                 )}
+              </div>
+
+              {/* Lists Section */}
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Product Highlights</label>
+                  <textarea name="highlights" value={form.highlights} onChange={handleChange} rows={3} className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3 text-xs leading-relaxed" placeholder="Feature one&#10;Feature two..." />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Color Variants</label>
+                  <textarea name="colors" value={form.colors} onChange={handleChange} rows={3} className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3 text-xs leading-relaxed" placeholder="Jet Black&#10;Snow White..." />
+                </div>
+              </div>
+
+              <button disabled={saving} className="w-full bg-slate-900 text-white rounded-2xl py-5 text-xs font-black uppercase tracking-[0.3em] hover:bg-indigo-600 transition-all disabled:opacity-50 shadow-lg shadow-slate-200">
+                {saving ? 'Processing...' : editingProductId ? 'Push Updates' : 'Deploy Product'}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        {/* Sidebar Sticky Preview */}
+        <aside className="lg:sticky lg:top-8 space-y-6">
+          <div className="bg-slate-900 rounded-3xl p-6 text-white overflow-hidden relative shadow-2xl">
+            <div className="absolute top-0 right-0 p-4">
+                <div className="w-20 h-20 bg-indigo-500/20 blur-3xl rounded-full"></div>
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 mb-4">Live Canvas</p>
+            
+            <div className="aspect-[4/5] rounded-2xl bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center group">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+              ) : (
+                <div className="p-8 text-center">
+                    <div className="w-12 h-12 border-2 border-white/20 border-dashed rounded-full mx-auto mb-4"></div>
+                    <p className="text-xs text-white/30 italic font-light">Asset visualization will appear here upon selection</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 space-y-2">
+                <h3 className="text-xl font-bold truncate">{form.title || 'Untitled Asset'}</h3>
+                <p className="text-indigo-400 font-mono text-sm">
+                    {form.price ? `Rs. ${Number(form.price).toLocaleString()}` : 'Price Pending'}
+                </p>
+            </div>
+          </div>
+
+          {(message || error) && (
+            <div className={`p-4 rounded-2xl text-xs font-bold uppercase tracking-tight animate-bounce ${error ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+              {error || message}
+            </div>
+          )}
+        </aside>
+      </div>
+
+      {/* Catalog Table Area */}
+      <section className="pt-12 border-t border-slate-200">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+            <div>
+                <h2 className="text-2xl font-black uppercase tracking-tighter">Current Catalog</h2>
+                <p className="text-slate-400 text-sm mt-1">{products.length} Items Syncing</p>
+            </div>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {products.map((product) => (
+            <div key={product.id} className="group bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl transition-all duration-500">
+              <div className="relative h-48 overflow-hidden">
+                <img src={getImageSrc(product.coverImage)} alt={product.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute top-3 left-3">
+                    <span className="bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-900 shadow-sm">
+                        {product.category || 'General'}
+                    </span>
+                </div>
+              </div>
+              <div className="p-5">
+                <h4 className="font-bold text-slate-800 truncate mb-1">{product.title}</h4>
+                <p className="text-indigo-600 font-mono text-xs mb-4">Rs. {Number(product.price).toLocaleString()}</p>
+                
+                <div className="flex gap-2">
+                  <button onClick={() => handleEdit(product)} className="flex-1 bg-slate-50 hover:bg-slate-900 hover:text-white text-slate-600 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2">
+                    <EditIcon /> <span className="text-[10px] font-black uppercase">Edit</span>
+                  </button>
+                  <button onClick={() => handleDelete(product.id)} className="w-12 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 py-2.5 rounded-xl transition-all flex items-center justify-center">
+                    <DeleteIcon />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {products.length === 0 && !loading && (
+            <div className="col-span-full py-20 bg-slate-50 rounded-4xl border-2 border-dashed border-slate-200 text-center">
+                <p className="text-slate-400 text-sm font-medium">Database is currently empty.</p>
             </div>
           )}
         </div>
-      </div>
+      </section>
     </div>
   )
 }

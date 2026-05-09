@@ -48,7 +48,37 @@ MYSQL_DATABASE=auronic_store
 MYSQL_PORT=3306
 FLASK_ENV=development
 FLASK_DEBUG=True
+PAYMENT_METHODS=COD,CARD,BANK_TRANSFER,JAZZCASH,EASYPAISA
+PAYMENT_SUPPORT_PHONE=+92xxxxxxxxxx
+CARD_GATEWAY_LABEL=Card Payment
+CARD_GATEWAY_SUMMARY=Secure card checkout through the configured payment gateway.
+CARD_GATEWAY_INSTRUCTIONS=Complete the payment through the secure card checkout link.
+CARD_GATEWAY_CHECKOUT_URL=
+CARD_GATEWAY_PUBLIC_KEY=
+CARD_GATEWAY_SECRET_KEY=
+BANK_TRANSFER_LABEL=Bank Transfer
+BANK_TRANSFER_SUMMARY=Transfer directly to the configured bank account.
+BANK_TRANSFER_INSTRUCTIONS=Use the bank account details below to transfer your order amount.
+BANK_TRANSFER_BANK_NAME=
+BANK_TRANSFER_ACCOUNT_NAME=
+BANK_TRANSFER_ACCOUNT_NUMBER=
+BANK_TRANSFER_IBAN=
+BANK_TRANSFER_BRANCH=
+JAZZCASH_LABEL=JazzCash
+JAZZCASH_SUMMARY=Pay through JazzCash using the configured merchant account.
+JAZZCASH_INSTRUCTIONS=Send the payment to the JazzCash number below and keep the reference safe.
+JAZZCASH_MERCHANT_NAME=
+JAZZCASH_MERCHANT_NUMBER=
+JAZZCASH_REFERENCE_PREFIX=
+EASYPAISA_LABEL=Easypaisa
+EASYPAISA_SUMMARY=Pay through Easypaisa using the configured merchant account.
+EASYPAISA_INSTRUCTIONS=Send the payment to the Easypaisa number below and keep the reference safe.
+EASYPAISA_MERCHANT_NAME=
+EASYPAISA_MERCHANT_NUMBER=
+EASYPAISA_REFERENCE_PREFIX=
 ```
+
+Keep secret provider keys only in `Backend/.env`. Do not place secret keys in the frontend unless a provider explicitly requires a public key for client-side initialization.
 
 ### 4. Run Flask Backend
 
@@ -128,6 +158,8 @@ Or set environment variable:
 ```bash
 VITE_API_BASE_URL=http://your-backend-url:5000 npm run dev
 ```
+
+The checkout UI can now submit orders with `COD`, `CARD`, `BANK_TRANSFER`, `JAZZCASH`, and `EASYPAISA`. The backend reads the payment details from `Backend/.env` and returns only public instructions to the frontend.
 
 ## Troubleshooting
 

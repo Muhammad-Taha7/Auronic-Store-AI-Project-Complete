@@ -9,6 +9,16 @@ const statusStyles = {
   cancelled: 'bg-rose-100 text-rose-800 border-rose-200',
 }
 
+const paymentMethodLabels = {
+  COD: 'Cash On Delivery',
+  CARD: 'Card / Online Card',
+  BANK_TRANSFER: 'Pakistani Bank Transfer',
+  JAZZCASH: 'JazzCash',
+  EASYPAISA: 'Easypaisa',
+}
+
+const formatPaymentMethod = (value) => paymentMethodLabels[value] || value
+
 export const Orders = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -176,7 +186,7 @@ export const Orders = () => {
               <div className="rounded-2xl border border-black/10 bg-black/5 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-black/45">Summary</p>
                 <p className="mt-2 text-sm text-black/70">Status: {selectedOrder.status}</p>
-                <p className="text-sm text-black/70">Payment: {selectedOrder.paymentMethod}</p>
+                <p className="text-sm text-black/70">Payment: {formatPaymentMethod(selectedOrder.paymentMethod)}</p>
                 <p className="text-sm text-black/70">Subtotal: Rs. {Number(selectedOrder.subtotal || 0).toLocaleString()}</p>
                 <p className="text-sm text-black/70">Shipping: Rs. {Number(selectedOrder.shippingFee || 0).toLocaleString()}</p>
                 <p className="mt-2 text-sm font-bold text-black">Total: Rs. {Number(selectedOrder.total || 0).toLocaleString()}</p>

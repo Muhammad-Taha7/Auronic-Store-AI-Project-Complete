@@ -10,6 +10,8 @@ from flask import Flask, jsonify, request, send_from_directory, Response
 from flask_cors import CORS
 from mysql.connector import Error, connect
 from werkzeug.utils import secure_filename
+
+from app_config import get_enabled_payment_methods, get_payment_details, normalize_payment_method
 from chatbot import chatbot
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -757,7 +759,7 @@ def create_order():
     shipping_address = (payload.get("shippingAddress") or "").strip()
     city = (payload.get("city") or "").strip()
     notes = (payload.get("notes") or "").strip()
-    payment_method = (payload.get("paymentMethod") or "COD").strip().upper()
+    payment_method = normalize_payment_method(payload.get("paymentMethod") or "COD")
     user_uid = (payload.get("userUid") or "").strip() or None
     items = payload.get("items") or []
     subtotal = parse_float_field(payload.get("subtotal"), 0.0)
@@ -774,8 +776,8 @@ def create_order():
         return jsonify({"message": "Shipping address is required."}), 400
     if not city:
         return jsonify({"message": "City is required."}), 400
-    if payment_method != "COD":
-        return jsonify({"message": "Only Cash on Delivery is available right now."}), 400
+    if payment_method not in get_enabled_payment_methods():
+        return jsonify({"message": "Selected payment method is not available right now."}), 400
     if not isinstance(items, list) or len(items) == 0:
         return jsonify({"message": "At least one order item is required."}), 400
 
@@ -807,6 +809,7 @@ def create_order():
         total = subtotal + shipping_fee
 
     order_number = f"ORD-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid4().hex[:5].upper()}"
+    payment_details = get_payment_details(payment_method)
 
     connection = None
     cursor = None
@@ -846,6 +849,7 @@ def create_order():
                     "message": "Order placed successfully.",
                     "orderId": cursor.lastrowid,
                     "orderNumber": order_number,
+                    "paymentDetails": payment_details,
                 }
             ),
             201,

@@ -25,6 +25,41 @@ const defaultCheckoutForm = {
   paymentMethod: 'COD',
 }
 
+const PAYMENT_METHOD_OPTIONS = [
+  {
+    value: 'COD',
+    label: 'Cash On Delivery',
+    description: 'Pay the courier when the parcel arrives.',
+  },
+  {
+    value: 'CARD',
+    label: 'Card / Online Card',
+    description: 'Secure card checkout through your configured gateway.',
+  },
+  {
+    value: 'BANK_TRANSFER',
+    label: 'Pakistani Bank Transfer',
+    description: 'Transfer directly to the configured bank account.',
+  },
+  {
+    value: 'JAZZCASH',
+    label: 'JazzCash',
+    description: 'Use the JazzCash merchant details configured by the store.',
+  },
+  {
+    value: 'EASYPAISA',
+    label: 'Easypaisa',
+    description: 'Use the Easypaisa merchant details configured by the store.',
+  },
+]
+
+const PAYMENT_METHOD_LABELS = PAYMENT_METHOD_OPTIONS.reduce((labels, option) => {
+  labels[option.value] = option.label
+  return labels
+}, {})
+
+const getPaymentMethodLabel = (value) => PAYMENT_METHOD_LABELS[value] || value
+
 const CartIcon = () => (
   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path
@@ -42,6 +77,7 @@ export const Navbar = () => {
   const [checkoutForm, setCheckoutForm] = React.useState(defaultCheckoutForm)
   const [checkoutError, setCheckoutError] = React.useState('')
   const [checkoutSuccess, setCheckoutSuccess] = React.useState('')
+  const [paymentDetails, setPaymentDetails] = React.useState(null)
   const [placingOrder, setPlacingOrder] = React.useState(false)
 
   const { user } = useAuth()
@@ -80,11 +116,16 @@ export const Navbar = () => {
   const handleCheckoutChange = (event) => {
     const { name, value } = event.target
     setCheckoutForm((current) => ({ ...current, [name]: value }))
+
+    if (name === 'paymentMethod') {
+      setPaymentDetails(null)
+    }
   }
 
   const startCheckout = () => {
     setCheckoutError('')
     setCheckoutSuccess('')
+    setPaymentDetails(null)
 
     if (!items.length) {
       setCheckoutError('Your cart is empty.')
@@ -134,7 +175,7 @@ export const Navbar = () => {
         },
         body: JSON.stringify({
           ...checkoutForm,
-          paymentMethod: 'COD',
+          paymentMethod: checkoutForm.paymentMethod,
           userUid: user?.uid || '',
           items,
           subtotal: cartSubtotal,
@@ -150,6 +191,7 @@ export const Navbar = () => {
 
       clearCart()
       setCheckoutSuccess(`Order placed successfully. Order No: ${data.orderNumber}`)
+      setPaymentDetails(data.paymentDetails || null)
       setCheckoutForm((current) => ({
         ...defaultCheckoutForm,
         customerName: user?.displayName || '',
@@ -298,7 +340,9 @@ export const Navbar = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.35em] text-black/45">Secure Checkout</p>
-                <h3 className="mt-2 text-2xl font-black uppercase tracking-[0.16em] text-black">Cash On Delivery</h3>
+                <h3 className="mt-2 text-2xl font-black uppercase tracking-[0.16em] text-black">
+                  {getPaymentMethodLabel(checkoutForm.paymentMethod)}
+                </h3>
               </div>
               <button
                 type="button"
@@ -373,16 +417,93 @@ export const Navbar = () => {
                 />
               </div>
 
+              <div className="sm:col-span-2">
+                <label className="mb-2 block text-xs font-bold uppercase tracking-[0.28em] text-black/50">Payment Method</label>
+                <select
+                  name="paymentMethod"
+                  value={checkoutForm.paymentMethod}
+                  onChange={handleCheckoutChange}
+                  className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm focus:border-black focus:outline-none"
+                >
+                  {PAYMENT_METHOD_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs leading-6 text-black/45">
+                  {PAYMENT_METHOD_OPTIONS.find((option) => option.value === checkoutForm.paymentMethod)?.description}
+                </p>
+              </div>
+
               <div className="sm:col-span-2 rounded-2xl border border-black/10 bg-black/5 p-4">
                 <div className="flex items-center justify-between text-sm text-black/70">
                   <span>Payment Method</span>
-                  <span className="rounded-full border border-black px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-black">Cash On Delivery</span>
+                  <span className="rounded-full border border-black px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-black">
+                    {getPaymentMethodLabel(checkoutForm.paymentMethod)}
+                  </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between text-sm text-black/70">
                   <span>Total Payable</span>
                   <span className="text-lg font-black text-black">Rs. {totalAmount.toLocaleString()}</span>
                 </div>
+                <p className="mt-3 text-xs leading-6 text-black/55">
+                  Payment details are loaded securely from backend environment settings after the order is created.
+                </p>
               </div>
+
+              {paymentDetails && paymentDetails.code !== 'COD' ? (
+                <div className="sm:col-span-2 rounded-2xl border border-black/10 bg-black/5 p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.28em] text-black/45">Payment Instructions</p>
+                  <h4 className="mt-2 text-lg font-black uppercase tracking-[0.14em] text-black">{paymentDetails.label}</h4>
+                  <p className="mt-2 text-sm leading-6 text-black/70">{paymentDetails.summary}</p>
+                  {Array.isArray(paymentDetails.instructions) && paymentDetails.instructions.length > 0 ? (
+                    <ul className="mt-3 space-y-2 text-sm leading-6 text-black/65">
+                      {paymentDetails.instructions.map((instruction, index) => (
+                        <li key={`${paymentDetails.code}-${index}`} className="rounded-xl bg-white px-3 py-2 shadow-sm">
+                          {instruction}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {paymentDetails.bankName ? (
+                      <div className="rounded-xl bg-white px-3 py-2 text-sm text-black/70">
+                        <span className="block text-[10px] font-bold uppercase tracking-[0.24em] text-black/40">Bank</span>
+                        {paymentDetails.bankName}
+                      </div>
+                    ) : null}
+                    {paymentDetails.accountName ? (
+                      <div className="rounded-xl bg-white px-3 py-2 text-sm text-black/70">
+                        <span className="block text-[10px] font-bold uppercase tracking-[0.24em] text-black/40">Account Name</span>
+                        {paymentDetails.accountName}
+                      </div>
+                    ) : null}
+                    {paymentDetails.accountNumber ? (
+                      <div className="rounded-xl bg-white px-3 py-2 text-sm text-black/70">
+                        <span className="block text-[10px] font-bold uppercase tracking-[0.24em] text-black/40">Account Number</span>
+                        {paymentDetails.accountNumber}
+                      </div>
+                    ) : null}
+                    {paymentDetails.merchantNumber ? (
+                      <div className="rounded-xl bg-white px-3 py-2 text-sm text-black/70">
+                        <span className="block text-[10px] font-bold uppercase tracking-[0.24em] text-black/40">Merchant Number</span>
+                        {paymentDetails.merchantNumber}
+                      </div>
+                    ) : null}
+                    {paymentDetails.checkoutUrl ? (
+                      <a
+                        href={paymentDetails.checkoutUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-3 text-xs font-bold uppercase tracking-[0.24em] text-white transition hover:bg-black/90"
+                      >
+                        Open Secure Card Checkout
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
 
               {checkoutError ? <p className="sm:col-span-2 text-sm text-red-600">{checkoutError}</p> : null}
               {checkoutSuccess ? <p className="sm:col-span-2 text-sm text-green-700">{checkoutSuccess}</p> : null}
